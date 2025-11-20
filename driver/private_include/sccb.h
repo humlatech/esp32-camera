@@ -9,6 +9,11 @@
 #ifndef __SCCB_H__
 #define __SCCB_H__
 #include <stdint.h>
+
+// Forward declaration for i2c_master_bus_handle_t
+typedef struct i2c_master_bus_t *i2c_master_bus_handle_t;
+
+void sccb_set_bus_handle(i2c_master_bus_handle_t bus_handle);
 int SCCB_Init(int pin_sda, int pin_scl);
 int SCCB_Use_Port(int sccb_i2c_port);
 int SCCB_Deinit(void);

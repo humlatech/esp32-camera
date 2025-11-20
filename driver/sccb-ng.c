@@ -59,6 +59,13 @@ static device_t devices[MAX_DEVICES];
 static uint8_t device_count = 0;
 static int sccb_i2c_port;
 static bool sccb_owns_i2c_port;
+static i2c_master_bus_handle_t g_external_bus_handle = NULL; // External bus handle from i2c_handler
+
+// Function to set external I2C bus handle (called from main app)
+void sccb_set_bus_handle(i2c_master_bus_handle_t bus_handle) {
+    g_external_bus_handle = bus_handle;
+    ESP_LOGI(TAG, "External I2C bus handle set: %p", (void*)bus_handle);
+}
 
 i2c_master_dev_handle_t *get_handle_from_address(uint8_t slv_addr)
 {
@@ -86,11 +93,17 @@ int SCCB_Install_Device(uint8_t slv_addr)
         return ESP_FAIL;
     }
 
-    ret = i2c_master_get_bus_handle(sccb_i2c_port, &bus_handle);
-    if (ret != ESP_OK)
-    {
-        ESP_LOGE(TAG, "failed to get SCCB I2C Bus handle for port %d", sccb_i2c_port);
-        return ret;
+    // Use external bus handle if provided, otherwise try to get from port
+    if (g_external_bus_handle != NULL) {
+        bus_handle = g_external_bus_handle;
+        ESP_LOGI(TAG, "Using external I2C bus handle: %p", (void*)bus_handle);
+    } else {
+        ret = i2c_master_get_bus_handle(sccb_i2c_port, &bus_handle);
+        if (ret != ESP_OK)
+        {
+            ESP_LOGE(TAG, "failed to get SCCB I2C Bus handle for port %d", sccb_i2c_port);
+            return ret;
+        }
     }
 
     i2c_device_config_t dev_cfg = {

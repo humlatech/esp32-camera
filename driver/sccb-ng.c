@@ -82,10 +82,31 @@ i2c_master_dev_handle_t *get_handle_from_address(uint8_t slv_addr)
     return NULL;
 }
 
+// Check if a device is already registered (used to determine if wake is needed before init)
+bool SCCB_Is_Device_Registered(uint8_t slv_addr)
+{
+    for (uint8_t i = 0; i < device_count; i++)
+    {
+        if (devices[i].address == slv_addr && devices[i].dev_handle != NULL)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 int SCCB_Install_Device(uint8_t slv_addr)
 {
     esp_err_t ret;
     i2c_master_bus_handle_t bus_handle;
+
+    // Check if device is already registered (can happen with external bus after deinit/reinit)
+    for (uint8_t i = 0; i < device_count; i++) {
+        if (devices[i].address == slv_addr && devices[i].dev_handle != NULL) {
+            ESP_LOGI(TAG, "Device with address 0x%02x already registered, reusing handle", slv_addr);
+            return ESP_OK;
+        }
+    }
 
     if (device_count >= MAX_DEVICES)
     {
@@ -173,19 +194,26 @@ int SCCB_Deinit(void)
 {
     esp_err_t ret;
 
-    for (uint8_t i = 0; i < device_count; i++)
-    {
-        ret = i2c_master_bus_rm_device(devices[i].dev_handle);
-        if (ret != ESP_OK)
+    // Only remove devices if SCCB owns the I2C port
+    // If using external bus handle, leave device registered for re-init
+    if (sccb_owns_i2c_port) {
+        for (uint8_t i = 0; i < device_count; i++)
         {
-            ESP_LOGE(TAG, "failed to remove SCCB I2C Device");
-            return ret;
-        }
+            ret = i2c_master_bus_rm_device(devices[i].dev_handle);
+            if (ret != ESP_OK)
+            {
+                ESP_LOGE(TAG, "failed to remove SCCB I2C Device");
+                return ret;
+            }
 
-        devices[i].dev_handle = NULL;
-        devices[i].address = 0;
+            devices[i].dev_handle = NULL;
+            devices[i].address = 0;
+        }
+        device_count = 0;
+    } else {
+        // External bus: keep device handles valid for re-init
+        ESP_LOGI(TAG, "Using external I2C bus, keeping device handles registered");
     }
-    device_count = 0;
 
     if (!sccb_owns_i2c_port)
     {

@@ -85,6 +85,16 @@ i2c_master_dev_handle_t *get_handle_from_address(uint8_t slv_addr)
     return NULL;
 }
 
+static i2c_master_dev_handle_t get_dev_handle_or_null(uint8_t slv_addr)
+{
+    i2c_master_dev_handle_t *dev_handle_ptr = get_handle_from_address(slv_addr);
+    if (dev_handle_ptr == NULL || *dev_handle_ptr == NULL)
+    {
+        return NULL;
+    }
+    return *dev_handle_ptr;
+}
+
 // Check if a device is already registered (used to determine if wake is needed before init)
 bool SCCB_Is_Device_Registered(uint8_t slv_addr)
 {
@@ -266,7 +276,11 @@ int SCCB_Probe(uint8_t slv_addr)
 
 uint8_t SCCB_Read(uint8_t slv_addr, uint8_t reg)
 {
-    i2c_master_dev_handle_t dev_handle = *(get_handle_from_address(slv_addr));
+    i2c_master_dev_handle_t dev_handle = get_dev_handle_or_null(slv_addr);
+    if (dev_handle == NULL)
+    {
+        return 0;
+    }
 
     uint8_t tx_buffer[1];
     uint8_t rx_buffer[1] = {0};
@@ -290,7 +304,11 @@ uint8_t SCCB_Read(uint8_t slv_addr, uint8_t reg)
 
 int SCCB_Write(uint8_t slv_addr, uint8_t reg, uint8_t data)
 {
-    i2c_master_dev_handle_t dev_handle = *(get_handle_from_address(slv_addr));
+    i2c_master_dev_handle_t dev_handle = get_dev_handle_or_null(slv_addr);
+    if (dev_handle == NULL)
+    {
+        return -1;
+    }
 
     uint8_t tx_buffer[2];
     tx_buffer[0] = reg;
@@ -308,7 +326,11 @@ int SCCB_Write(uint8_t slv_addr, uint8_t reg, uint8_t data)
 
 uint8_t SCCB_Read16(uint8_t slv_addr, uint16_t reg)
 {
-    i2c_master_dev_handle_t dev_handle = *(get_handle_from_address(slv_addr));
+    i2c_master_dev_handle_t dev_handle = get_dev_handle_or_null(slv_addr);
+    if (dev_handle == NULL)
+    {
+        return 0;
+    }
 
     uint8_t rx_buffer[1];
 
@@ -327,7 +349,11 @@ uint8_t SCCB_Read16(uint8_t slv_addr, uint16_t reg)
 
 int SCCB_Write16(uint8_t slv_addr, uint16_t reg, uint8_t data)
 {
-    i2c_master_dev_handle_t dev_handle = *(get_handle_from_address(slv_addr));
+    i2c_master_dev_handle_t dev_handle = get_dev_handle_or_null(slv_addr);
+    if (dev_handle == NULL)
+    {
+        return -1;
+    }
 
     uint8_t tx_buffer[3];
     tx_buffer[0] = reg >> 8;
@@ -345,7 +371,11 @@ int SCCB_Write16(uint8_t slv_addr, uint16_t reg, uint8_t data)
 
 uint16_t SCCB_Read_Addr16_Val16(uint8_t slv_addr, uint16_t reg)
 {
-    i2c_master_dev_handle_t dev_handle = *(get_handle_from_address(slv_addr));
+    i2c_master_dev_handle_t dev_handle = get_dev_handle_or_null(slv_addr);
+    if (dev_handle == NULL)
+    {
+        return 0;
+    }
 
     uint8_t rx_buffer[2];
 
@@ -365,7 +395,11 @@ uint16_t SCCB_Read_Addr16_Val16(uint8_t slv_addr, uint16_t reg)
 
 int SCCB_Write_Addr16_Val16(uint8_t slv_addr, uint16_t reg, uint16_t data)
 {
-    i2c_master_dev_handle_t dev_handle = *(get_handle_from_address(slv_addr));
+    i2c_master_dev_handle_t dev_handle = get_dev_handle_or_null(slv_addr);
+    if (dev_handle == NULL)
+    {
+        return -1;
+    }
 
     uint8_t tx_buffer[4];
     tx_buffer[0] = reg >> 8;

@@ -231,6 +231,26 @@ static esp_err_t ll_cam_dma_init(cam_obj_t *cam)
         ESP_LOGE(TAG, "Can't get GDMA channel number");
         return ESP_FAIL;
     }
+#if ESP_IDF_VERSION_MAJOR >= 6
+    if (chan_id == 1) {
+        // Empirical mitigation: camera dead-stream events correlate with RX DMA
+        // channel 1 on this platform under heavy Wi-Fi/audio churn. If possible,
+        // switch to a different RX channel before continuing.
+        gdma_channel_handle_t alternate_rx = NULL;
+        esp_err_t alt_ret = gdma_new_ahb_channel(&rx_alloc_config, NULL, &alternate_rx);
+        if (alt_ret == ESP_OK && alternate_rx != NULL) {
+            int alt_id = -1;
+            if (gdma_get_channel_id(alternate_rx, &alt_id) == ESP_OK && alt_id != 1) {
+                gdma_del_channel(cam->dma_channel_handle);
+                cam->dma_channel_handle = alternate_rx;
+                chan_id = alt_id;
+                ESP_LOGW(TAG, "Avoided camera RX DMA channel 1, switched to channel %d", chan_id);
+            } else {
+                gdma_del_channel(alternate_rx);
+            }
+        }
+    }
+#endif
     cam->dma_num = chan_id;
     ESP_LOGI(TAG, "DMA Channel=%d", cam->dma_num);
     // for (int x = (SOC_GDMA_PAIRS_PER_GROUP - 1); x >= 0; x--) {

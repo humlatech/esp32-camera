@@ -384,7 +384,9 @@ esp_err_t esp_camera_deinit()
     return ret;
 }
 
-#define FB_GET_TIMEOUT (4000 / portTICK_PERIOD_MS)
+// Keep frame-get timeout short to avoid multi-second UI stalls when the
+// sensor stream is dead; higher-level camera SM handles retries/recovery.
+#define FB_GET_TIMEOUT (1200 / portTICK_PERIOD_MS)
 
 camera_fb_t *esp_camera_fb_get()
 {
